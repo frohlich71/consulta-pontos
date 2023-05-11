@@ -1,269 +1,322 @@
-// const horasTrabalho = ["08:00", "12:00", "13:30", "17:30"]
+const newHorarioForm = document.getElementById('horario-form')
+const marcacoesForm = document.getElementById('marcacoes-form')
 
-// const marcacoes = ["06:00", "20:00"]
+const base_url = "http://localhost:8080/pontos-servlet"
 
-function subtrairHorarios(horariosTrabalho, horariosMarcacoes) {
-  const horarios = [...horariosTrabalho, ...horariosMarcacoes].sort();
-  const resultados = [];
 
-  for (let i = 0; i < horarios.length; i += 2) {
-    const entrada = horarios[i];
-    const saida = horarios[i + 1];
-    let tipo = "";
+let horario_edit_id = null
+let marca_edit_id = null
 
-    if (horariosTrabalho.includes(entrada) && horariosTrabalho.includes(saida) 
-			&& horariosMarcacoes.includes(entrada) && horariosMarcacoes.includes(saida)) {
-      continue;
+
+//EVENT LISTENERS
+newHorarioForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  
+  const entrada = document.getElementById('entradaMarcarHoras').value
+  const saida = document.getElementById('saidaMarcarHoras').value
+
+  if (!verificaTabela('horarios-table')) {
+    addNewHorario(entrada, saida)
+  } else {
+    alert('Limite maximo de registros atingido')
+  }
+});
+
+marcacoesForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  
+  const entrada = document.getElementById('marcacoesEntradaInput').value
+  const saida = document.getElementById('marcacoesSaidaInput').value
+
+  addNewMarcacoes(entrada, saida)
+
+});
+
+//CORE FUNCTIONS
+function addNewHorario(entrada, saida) {
+  const table = document.getElementById('horarios-table');
+  const rowCount = table.rows.length;
+  const row = table.insertRow(rowCount); 
+  const id = rowCount; 
+
+  const idCell = row.insertCell(0)
+  const entradaCell = row.insertCell(1); 
+  const saidaCell = row.insertCell(2); 
+  const editCell = row.insertCell(3); 
+  const deleteCell = row.insertCell(4); 
+
+  idCell.innerHTML = id;
+  entradaCell.innerHTML = entrada; 
+  saidaCell.innerHTML = saida; 
+  editCell.innerHTML = `<button id='edit-horario-${id}' type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-edit-horas" onclick="setHorarioEditId(this.parentNode.parentNode.rowIndex, this.id)">Edit</button>`; 
+  deleteCell.innerHTML = '<button type="button" class="btn btn-danger btn-horario" onclick="deleteRegistro(this)">Delete</button>';
+}
+
+function addNewMarcacoes(entrada, saida) {
+  const table = document.getElementById('marcacoes-table');
+  const rowCount = table.rows.length;
+  const row = table.insertRow(rowCount); 
+  const id = rowCount; 
+
+  const idCell = row.insertCell(0)
+  const entradaCell = row.insertCell(1); 
+  const saidaCell = row.insertCell(2); 
+  const editCell = row.insertCell(3); 
+  const deleteCell = row.insertCell(4); 
+
+  idCell.innerHTML = id;
+  entradaCell.innerHTML = entrada; 
+  saidaCell.innerHTML = saida; 
+  editCell.innerHTML = `<button id='edit-marca-${id}' type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-edit-marcas" onclick="setHorarioEditId(this.parentNode.parentNode.rowIndex, this.id)">Edit</button>`; 
+  deleteCell.innerHTML = '<button type="button" class="btn btn-danger" onclick="deleteRegistro(this)">Delete</button>';
+}
+
+async function setAtrasos() {
+  const horarios = adicionarDatas(getHorarios())
+  const marcas = adicionarDatas(getMarcas())
+  const tabela = document.getElementById('atraso-tbody')
+
+  const response = await fetch(base_url + '/CalculoHorario', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      'horarios': horarios.toString(),
+      'marcacoes': marcas.toString()
+    })
+  })
+
+	var data = await response.text()
+  tabela.innerHTML = ""
+
+  let atrasos = converterStringParaArray(data)
+
+  for (let i = 0; i < atrasos.length; i++) {
+    const objeto = atrasos[i];
+
+    if (objeto.tipo == 'Atraso') {
+      const novaLinha = tabela.insertRow();
+
+      const entradaCelula = novaLinha.insertCell();
+      const saidaCelula = novaLinha.insertCell();
+  
+      entradaCelula.textContent = objeto.entrada;
+      saidaCelula.textContent = objeto.saida;
+      
     } else {
-      let horarioEncontrado = false;
-      for (var j = 0; j < horariosTrabalho.length; j += 2) {
-        const entradaHorario = horariosTrabalho[j]
-        const saidaHorario = horariosTrabalho[j+1]
-
-        if (entrada >= entradaHorario && saida <= saidaHorario) {
-          horarioEncontrado = true;
-          break;
-        }
-      }
-
-      if (horarioEncontrado) {
-        tipo = "Atraso";
-      } else {
-        tipo = "Hora-Extra";
-      }
-
-      resultados.push({tipo, entrada, saida});
+      continue
     }
   }
 
-  return resultados;
 }
 
-function converterStringParaArray(string, campo) {
-  string = string.replace(/\s+/g, '');
+async function setHorasExtras() {
+  const horarios = adicionarDatas(getHorarios())
+  const marcas = adicionarDatas( getMarcas())
 
-  const regex = new RegExp(`${campo}\\[id=(\\d+),entrada=(\\d{2}:\\d{2}),saida=(\\d{2}:\\d{2})\\]`, 'g');
+  const tabela = document.getElementById('horaExtra-tbody')
 
-  const horarios = [];
 
-  let match;
-  while ((match = regex.exec(string)) !== null) {
-    const id = parseInt(match[1]);
-    const entrada = match[2];
-    const saida = match[3];
+  const response = await fetch(base_url + '/CalculoHorario', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      'horarios': horarios.toString(),
+      'marcacoes': marcas.toString()
+    })
+  })
 
-    const horario = {
-      id: id,
-      [campo]: {
-        entrada: entrada,
-        saida: saida,
-      },
-    };
+	var data = await response.text()
+  tabela.innerHTML = ""
 
-    horarios.push(horario);
+  let horasExtras = converterStringParaArray(data)
+
+
+  for (let i = 0; i < horasExtras.length; i++) {
+    const objeto = horasExtras[i];
+
+    if (objeto.tipo == 'Hora-Extra') {
+      const novaLinha = tabela.insertRow();
+
+      const entradaCelula = novaLinha.insertCell();
+      const saidaCelula = novaLinha.insertCell();
+  
+      entradaCelula.textContent = objeto.entrada;
+      saidaCelula.textContent = objeto.saida;
+      
+    } else {
+      continue
+    }
   }
 
-  return horarios;
 }
 
-async function getHorariosDeTrabalho () {
-	const base_url = "http://localhost:8080/pontos-servlet"
+function getHorarios() {
+  var tabelaHorarios = document.getElementById("horarios-table");
+  var horarios = tabelaHorarios.getElementsByTagName("tr");
+  var arrayHorarios = [];
 
-	const tableBody = document.getElementById("horario-trabalho-tbody")
-	const response = await fetch(base_url + '/HorarioDeTrabalhoCreateAndFind')
-	var data = await response.text()
+  for (var i = 1; i < horarios.length; i++) {
+    var celulas = horarios[i].getElementsByTagName("td");
 
-	let horarios = converterStringParaArray(data, 'HorarioDeTrabalho')
+    for (var j = 0; j < celulas.length; j++) {
+      var valor = celulas[j].innerHTML;
+      if (j === 1) {
+        arrayHorarios.push(valor);
+      } else if (j === 2) {
+        arrayHorarios.push(valor);
+      }
+    }
+  }
 
-	tableBody.innerHTML = ""
+  return arrayHorarios
+}
 
+function getMarcas() {
+  var tabelaMarcas = document.getElementById("marcacoes-table");
+  var marcas = tabelaMarcas.getElementsByTagName("tr");
+  var arrayMarcas = [];
 
-	horarios.map(horario => {
-		tableBody.innerHTML += 
-		`<tr>
-			<td>${horario.id}</td>
-			<td>${horario.HorarioDeTrabalho.entrada}</td>
-			<td>${horario.HorarioDeTrabalho.saida}</td>
-			<td>
-				<button onclick="TEMP()" type="button" class="btn btn-primary">Edit</button>
-			</td>
-			<td>
-				<button onclick="TEMP()" type="button" class="btn btn-danger">Delete</button>
-			</td>
-		</tr>
-		`
-	})
+  for (var i = 1; i < marcas.length; i++) {
+    var celulas = marcas[i].getElementsByTagName("td");
 
-	horarios = []
+    for (var j = 0; j < celulas.length; j++) {
+      var valor = celulas[j].innerHTML;
+
+      if (j === 1) {
+        arrayMarcas.push(valor);
+      } else if (j === 2) {
+        arrayMarcas.push(valor);
+      }
+    }
+  }
+  
+  return arrayMarcas
+}
+
+//UTILS
+function adicionarDatas(arrayHorarios) {
+  const formatoData = 'dd/MM/yyyy';
+  const horariosComDatas = [];
+  let compareArray = []
+
+  let dataAnterior = new Date();
+  
+  for (let i = 0; i < arrayHorarios.length; i++) {
+    const horario = arrayHorarios[i];
+
+    const [hora, minuto] = horario.split(':');
+    const data = new Date(dataAnterior.getTime()); 
+
+    data.setHours(Number(hora));
+    data.setMinutes(Number(minuto));
+
+    if (i > 0 && data.getHours() < arrayHorarios[i - 1].split(':')[0]) {
+      data.setDate(data.getDate() + 1);
+    }
+
+    const dataFormatada = formatDate(data, formatoData);
+
+    const horarioComData = `${dataFormatada} ${horario}`;
+    horariosComDatas.push(horarioComData);
+
+    dataAnterior = data;
+  }
+
+  return horariosComDatas;
+}
+
+function formatDate(date, format) {
+  const options = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  };
+
+  return date.toLocaleDateString(undefined, options);
+}
+
+function converterStringParaArray(inputString) {
+  const trimmedString = inputString.replace(/\[|\]/g, '');
+  
+  const substrings = trimmedString.split(',');
+
+  const objectArray = [];
+
+  for (let i = 0; i < substrings.length; i += 3) {
+    const tipo = substrings[i].split('=')[1];
+    const entradaWithDates = substrings[i + 1].split('=')[1];
+    const saidaWithDates = substrings[i + 2].split('=')[1];
+
+    const entradaWithoutDates = entradaWithDates.split(" ")
+    const saidaWithoutDates = saidaWithDates.split(" ")
+
+    const objeto = {
+      tipo: tipo.trim(),
+      entrada: entradaWithoutDates[1].trim(),
+      saida: saidaWithoutDates[1].trim()
+    };
+
+    objectArray.push(objeto);
+  }
+
+  return objectArray;
+}
+
+function deleteRegistro (botao) {
+  const celulaAcao = botao.parentNode;
+  const linha = celulaAcao.parentNode;
+  const tabela = linha.parentNode;
+
+  tabela.deleteRow(linha.rowIndex);
+}
+
+function editarColuna(form, event, targetTable) {
+  event.preventDefault();
+
+  const tabela = document.getElementById(targetTable);
+  const linhas = tabela.rows;
+  const entrada = form.elements['entrada'].value;
+  const saida = form.elements['saida'].value;
+
+  if (tabela.id === 'horarios-table') {
+    const celulaEntrada = linhas[horario_edit_id].cells[1];
+    const celulaSaida = linhas[horario_edit_id].cells[2];
+    
+    celulaEntrada.textContent = entrada;
+    celulaSaida.textContent = saida;
+  } else {
+    const celulaEntrada = linhas[marca_edit_id].cells[1];
+    const celulaSaida = linhas[marca_edit_id].cells[2];
+    
+    celulaEntrada.textContent = entrada;
+    celulaSaida.textContent = saida;
+  }
+}
+
+function setHorarioEditId(index, edit_id) {
+
+  if (edit_id === `edit-horario-${index}`) {
+    horario_edit_id = index
+  } else {
+    marca_edit_id = index
+  }
 
 }
 
-function createNewHorarioTrabalho () {
-	const base_url = "http://localhost:8080/pontos-servlet"
+function verificaTabela(nomeTabela) {
+  const tabela = document.getElementById(nomeTabela);
 
-	$("#button-modal-horario-trabalho").click(function () {
-		let entrada = $("#entradaMarcarHoras").val()
-		let saida = $("#saidaMarcarHoras").val()
-		
-		fetch(base_url + '/HorarioDeTrabalhoCreateAndFind', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
-			body: new URLSearchParams({
-				'entradaMarcarHoras': entrada,
-				'saidaMarcarHoras': saida
-			})
-		})
-		getHorariosDeTrabalho()
-		alert('Criado com sucesso')
-	})	
+  if (!tabela) {
+    return false;
+  }
+
+  const registros = tabela.querySelectorAll('tr');
+
+  const temTresRegistros = registros.length === 4;
+  
+  return temTresRegistros;
 }
-
-async function getMarcacoesFeitas() {
-	const base_url = "http://localhost:8080/pontos-servlet"
-
-	const tableBody = document.getElementById("marcacoes-feitas-tbody")
-	const response = await fetch(base_url + '/MarcacaoFeitaCreateAndFind')
-	var data = await response.text()
-
-	let marcacoes = converterStringParaArray(data, 'MarcacaoFeita')
-
-	tableBody.innerHTML = ""
-
-	marcacoes.map(marcacao => {
-		tableBody.innerHTML += 
-		`<tr>
-			<td>${marcacao.id}</td>
-			<td>${marcacao.MarcacaoFeita.entrada}</td>
-			<td>${marcacao.MarcacaoFeita.saida}</td>
-			<td>
-				<button onclick="TEMP()" type="button" class="btn btn-primary">Edit</button>
-			</td>
-			<td>
-				<button onclick="TEMP()" type="button" class="btn btn-danger">Delete</button>
-			</td>
-		</tr>
-		`
-	})
-	marcacoes = []
-}
-
-function createNewMarcacao() {
-	const base_url = "http://localhost:8080/pontos-servlet"
-
-	$("#button-modal-marcacoes-feitas").click(function () {
-		let entrada = $("#marcacoesEntradaInput").val()
-		let saida = $("#marcacoesSaidaInput").val()
-		
-		fetch(base_url + '/MarcacaoFeitaCreateAndFind', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
-			body: new URLSearchParams({
-				'marcacoesEntradaInput': entrada,
-				'marcacoesSaidaInput': saida
-			})
-		})
-		alert('Criado com sucesso')
-		location.reload()
-	})	
-}
-
-function setAtrasoTable() {
-	$("#calcular-atraso-btn").click(async function () {
-		const base_url = "http://localhost:8080/pontos-servlet"
-
-		const tableBody = document.getElementById("atraso-tbody")
-		
-		const responseMarks = await fetch(base_url + '/MarcacaoFeitaCreateAndFind')
-		var dataMarks = await responseMarks.text()
-
-		let marcacoes = converterStringParaArray(dataMarks, 'MarcacaoFeita')
-
-		const responseHorarios = await fetch(base_url + '/HorarioDeTrabalhoCreateAndFind')
-		var dataHorarios = await responseHorarios.text()
-
-		let horarios = converterStringParaArray(dataHorarios, 'HorarioDeTrabalho')
-
-		var horariosArray = []
-
-		var marcacaoArray = []
-
-
-		marcacoes.forEach(item => {
-			marcacaoArray.push(item.MarcacaoFeita.entrada)
-			marcacaoArray.push(item.MarcacaoFeita.saida)
-		})
-
-		horarios.forEach(item => {
-			horariosArray.push(item.HorarioDeTrabalho.entrada)
-			horariosArray.push(item.HorarioDeTrabalho.saida)
-		})
-
-		const atrasos = subtrairHorarios(horariosArray, marcacaoArray)
-
-		tableBody.innerHTML = ''
-
-		atrasos.map(item => {
-			if (item.tipo === 'Atraso') {
-				tableBody.innerHTML += 
-				`<tr>
-					<td>${item.entrada}</td>
-					<td>${item.saida}</td>
-				</tr>
-				`
-			}
-		})
-	})
-}
-
-function setHoraExtraTable() {
-	$("#calcular-hora-extra-btn").click(async function () {
-		const base_url = "http://localhost:8080/pontos-servlet"
-
-		const tableBody = document.getElementById("horaExtra-tbody")
-		
-		const responseMarks = await fetch(base_url + '/MarcacaoFeitaCreateAndFind')
-		var dataMarks = await responseMarks.text()
-
-		let marcacoes = converterStringParaArray(dataMarks, 'MarcacaoFeita')
-
-		const responseHorarios = await fetch(base_url + '/HorarioDeTrabalhoCreateAndFind')
-		var dataHorarios = await responseHorarios.text()
-
-		let horarios = converterStringParaArray(dataHorarios, 'HorarioDeTrabalho')
-
-		var horariosArray = []
-
-		var marcacaoArray = []
-
-
-		marcacoes.forEach(item => {
-			marcacaoArray.push(item.MarcacaoFeita.entrada)
-			marcacaoArray.push(item.MarcacaoFeita.saida)
-		})
-
-		horarios.forEach(item => {
-			horariosArray.push(item.HorarioDeTrabalho.entrada)
-			horariosArray.push(item.HorarioDeTrabalho.saida)
-		})
-
-		const horasExtra = subtrairHorarios(horariosArray, marcacaoArray)
-
-		tableBody.innerHTML = ''
-
-		horasExtra.map(item => {
-			if (item.tipo === 'Hora-Extra') {
-				tableBody.innerHTML += 
-				`<tr>
-					<td>${item.entrada}</td>
-					<td>${item.saida}</td>
-				</tr>
-				`
-			}
-		})
-	})
-}
-
