@@ -72,8 +72,8 @@ function addNewMarcacoes(entrada, saida) {
 }
 
 async function setAtrasos() {
-  const horarios = adicionarDatas(getHorarios())
-  const marcas = adicionarDatas(getMarcas())
+  const horarios = getHorarios();
+  const marcas = getMarcas()
   const tabela = document.getElementById('atraso-tbody')
 
   const response = await fetch(base_url + '/CalculoHorario', {
@@ -112,8 +112,8 @@ async function setAtrasos() {
 }
 
 async function setHorasExtras() {
-  const horarios = adicionarDatas(getHorarios())
-  const marcas = adicionarDatas( getMarcas())
+  const horarios = getHorarios()
+  const marcas =  getMarcas()
 
   const tabela = document.getElementById('horaExtra-tbody')
 
@@ -198,36 +198,35 @@ function getMarcas() {
 }
 
 //UTILS
-function adicionarDatas(arrayHorarios) {
-  const formatoData = 'dd/MM/yyyy';
-  const horariosComDatas = [];
-  let compareArray = []
+// function adicionarDatas(arrayHorarios) {
+//   const formatoData = 'dd/MM/yyyy';
+//   const horariosComDatas = [];
 
-  let dataAnterior = new Date();
+//   let dataAnterior = new Date();
   
-  for (let i = 0; i < arrayHorarios.length; i++) {
-    const horario = arrayHorarios[i];
+//   for (let i = 0; i < arrayHorarios.length; i++) {
+//     const horario = arrayHorarios[i];
 
-    const [hora, minuto] = horario.split(':');
-    const data = new Date(dataAnterior.getTime()); 
+//     const [hora, minuto] = horario.split(':');
+//     const data = new Date(dataAnterior.getTime()); 
 
-    data.setHours(Number(hora));
-    data.setMinutes(Number(minuto));
+//     data.setHours(Number(hora));
+//     data.setMinutes(Number(minuto));
 
-    if (i > 0 && data.getHours() < arrayHorarios[i - 1].split(':')[0]) {
-      data.setDate(data.getDate() + 1);
-    }
+//     if (i > 0 && data.getHours() < arrayHorarios[i - 1].split(':')[0]) {
+//       data.setDate(data.getDate() + 1);
+//     }
 
-    const dataFormatada = formatDate(data, formatoData);
+//     const dataFormatada = formatDate(data, formatoData);
 
-    const horarioComData = `${dataFormatada} ${horario}`;
-    horariosComDatas.push(horarioComData);
+//     const horarioComData = `${dataFormatada} ${horario}`;
+//     horariosComDatas.push(horarioComData);
 
-    dataAnterior = data;
-  }
+//     dataAnterior = data;
+//   }
 
-  return horariosComDatas;
-}
+//   return horariosComDatas;
+// }
 
 function formatDate(date, format) {
   const options = {
@@ -265,6 +264,7 @@ function converterStringParaArray(inputString) {
 
   return objectArray;
 }
+
 
 function deleteRegistro (botao) {
   const celulaAcao = botao.parentNode;

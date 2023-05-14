@@ -2,6 +2,7 @@ package controllers;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import model.HorariosComData;
 import model.ResultadoHorario;
 import service.HorariosUtil;
 
@@ -41,27 +43,35 @@ public class CalculoHorarioController extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		String horariosResponse = request.getParameter("horarios");
-		String marcacoesResponse = request.getParameter("marcacoes");
+		try {
+			String horariosResponse = request.getParameter("horarios");
+			String marcacoesResponse = request.getParameter("marcacoes");
+			
+			String elementosHorarios = horariosResponse.replace("[", "").replace("]", "");
+			String elementosMarcacoes = marcacoesResponse.replace("[", "").replace("]", "");
+			
+			
+			String[] horariosArray = elementosHorarios.split(",");
+			String[] marcacoesArray = elementosMarcacoes.split(",");
+			
+			List<String> horarios = Arrays.asList(horariosArray);
+			List<String> marcacoes = Arrays.asList(marcacoesArray);
+			
+			
+			PrintWriter out = response.getWriter();
+			
+			
+			HorariosComData horariosComData = HorariosUtil.adicionarDataAosHorarios(horarios, marcacoes);
+			
+			List<ResultadoHorario> resultHorarios = HorariosUtil.subtrairHorarios(horariosComData.getHorariosComData(), horariosComData.getMarcacoesComData());
+			
+			out.print(resultHorarios);
+			out.flush();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
-		String elementosHorarios = horariosResponse.replace("[", "").replace("]", "");
-		String elementosMarcacoes = marcacoesResponse.replace("[", "").replace("]", "");
-		
-		
-		String[] horariosArray = elementosHorarios.split(",");
-		String[] marcacoesArray = elementosMarcacoes.split(",");
-		
-		List<String> horarios = Arrays.asList(horariosArray);
-		List<String> marcacoes = Arrays.asList(marcacoesArray);
-		
-		
-		PrintWriter out = response.getWriter();
-		
-		
-		List<ResultadoHorario> resultHorarios = HorariosUtil.subtrairHorarios(horarios, marcacoes);
-		
-		out.print(resultHorarios);
-		out.flush();
 	}
 
 }
