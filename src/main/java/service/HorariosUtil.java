@@ -90,6 +90,7 @@ public class HorariosUtil {
 	    Calendar calendar_atual = Calendar.getInstance();
 	    
 	    Calendar calendar_proximo_dia = Calendar.getInstance();
+	    
 		
 	    calendar_atual.add(Calendar.DAY_OF_MONTH, 0);  
 	    calendar_proximo_dia.add(Calendar.DAY_OF_MONTH, 1);
@@ -105,21 +106,29 @@ public class HorariosUtil {
 	    proximoDia = formatoData.format(calendar_proximo_dia.getTime());
 	        
 	    boolean isVirada = false;
-	    Date entradaVirada = new Date();
+	    
 	    Date saidaVirada = new Date();
 
-	    
+	    String ultimaSaida = "";
 	    
 	    for (int i = 0; i < horariosTrabalho.size(); i+= 2) {
 	    	String entradaString = horariosTrabalho.get(i);
 	    	String saidaString = horariosTrabalho.get(i + 1);
 	    	
+	    	
 	    	if (saidaString.compareTo(entradaString) < 0 || isVirada) {
 	    		isVirada = true;
 	    		
-	    		entradaVirada = formatoHora.parse(entradaString);
 	    		saidaVirada = formatoHora.parse(saidaString);
+	    		
 	    	}
+	    	
+	    	if (entradaString.compareTo(ultimaSaida) < 0) {
+	    		saidaVirada = formatoHora.parse(saidaString);
+    			isVirada = true;
+    		}
+	    	
+	    	ultimaSaida = saidaString;
 	    }
 	    
 	    
@@ -127,10 +136,17 @@ public class HorariosUtil {
 	    	
 	    	boolean outroDiaHorario = false;
 	    	boolean outroDiaMarca = false;
+	    	String ultimoHorario = "";
+	    	String ultimaMarca = "";
 	    	
 	    	for (String horario: horariosTrabalho) {
 	    		
 	    		Date horarioEmData = formatoHora.parse(horario);
+	    		
+	    		if (ultimoHorario.compareTo(horario) > 0) {
+		    		outroDiaHorario = true;
+		    	}
+	    		
 	    		
 	    		if (horarioEmData.before(formatoHora.parse("23:59")) && horarioEmData.after(saidaVirada) && !outroDiaHorario)
 	    		{
@@ -146,6 +162,8 @@ public class HorariosUtil {
 	    			horariosComData.add(horarioComData);
 
 	    		}
+	    		
+	    		ultimoHorario = horario;
 	    	}
 	    	
 	    	
@@ -154,12 +172,16 @@ public class HorariosUtil {
 	    		
 	    		Date marcacaoEmData = formatoHora.parse(marcacao);
 	    		
+	    		
+	    		if (ultimaMarca.compareTo(marcacao) > 0) {
+		    		outroDiaMarca = true;
+		    	}
+	    		
 	    		if (marcacaoEmData.before(formatoHora.parse("23:59")) && marcacaoEmData.after(saidaVirada) && !outroDiaMarca)
 	    		{
 	    			String marcacaoComData = dataAtual + " " + marcacao;
 	    			
 			    	marcacoesComData.add(marcacaoComData);
-			    	
 	    		} else {
 	    			outroDiaMarca = true;
 	    			
@@ -167,6 +189,7 @@ public class HorariosUtil {
 	    			marcacoesComData.add(marcacaoComData);
 	    			
 	    		}
+	    		ultimaMarca = marcacao;
 	    	}
 	    	
 	    } else {

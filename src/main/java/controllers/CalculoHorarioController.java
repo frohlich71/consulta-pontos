@@ -60,8 +60,11 @@ public class CalculoHorarioController extends HttpServlet {
 			
 			PrintWriter out = response.getWriter();
 			
-			
 			HorariosComData horariosComData = HorariosUtil.adicionarDataAosHorarios(horarios, marcacoes);
+			
+			System.out.println(horariosComData.getHorariosComData());
+			
+			System.out.println(horariosComData.getMarcacoesComData());
 			
 			List<ResultadoHorario> resultHorarios = HorariosUtil.subtrairHorarios(horariosComData.getHorariosComData(), horariosComData.getMarcacoesComData());
 			
